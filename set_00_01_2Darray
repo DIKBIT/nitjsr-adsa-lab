@@ -1,0 +1,71 @@
+#include <iostream>
+using namespace std;
+
+
+void printArray(int** arr, int rows, int cols) {
+    cout << "\nCurrent array:\n";
+    for (int i = 0; i < rows; i++) {
+        for (int j = 0; j < cols; j++) {
+            cout << arr[i][j] << " ";
+        }
+        cout << "\n";
+    }
+    cout << "\n";
+}
+
+int main() {
+    int rows, cols;
+
+    
+    cout << "Enter number of rows: ";
+    cin >> rows;
+    cout << "Enter number of columns: ";
+    cin >> cols;
+
+   
+    int** arr = new int*[rows];
+    for (int i = 0; i < rows; i++) {
+        arr[i] = new int[cols];
+    }
+
+    
+    for (int i = 0; i < rows; i++) {
+        for (int j = 0; j < cols; j++) {
+            arr[i][j] = 0;
+        }
+    }
+
+    
+    printArray(arr, rows, cols);
+
+    
+    char choice;
+    do {
+        int r, c, value;
+        cout << "Enter row (0-" << rows - 1 << "): ";
+        cin >> r;
+        cout << "Enter column (0-" << cols - 1 << "): ";
+        cin >> c;
+        cout << "Enter value: ";
+        cin >> value;
+
+        if (r >= 0 && r < rows && c >= 0 && c < cols) {
+            arr[r][c] = value;
+        } else {
+            cout << "Invalid position!\n";
+        }
+
+        printArray(arr, rows, cols);
+
+        cout << "Do you want to insert another value? (y/n): ";
+        cin >> choice;
+    } while (choice == 'y' || choice == 'Y');
+
+   
+    for (int i = 0; i < rows; i++) {
+        delete[] arr[i];
+    }
+    delete[] arr;
+
+    return 0;
+}
