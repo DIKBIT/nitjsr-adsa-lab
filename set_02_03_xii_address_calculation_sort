@@ -1,0 +1,91 @@
+#include <stdio.h>
+#include <stdlib.h>
+
+
+int hash(int key, int size) {
+    return key % size;
+}
+
+
+void addressCalculationSort(int arr[], int n) {
+    
+    int minVal = arr[0];
+    for (int i = 1; i < n; i++) {
+        if (arr[i] < minVal)
+            minVal = arr[i];
+    }
+
+    
+    if (minVal < 0) {
+        for (int i = 0; i < n; i++) {
+            arr[i] -= minVal;
+        }
+    }
+
+    int size = n * 2;  // Table size (extra space to reduce collisions)
+    int *table = (int *)malloc(size * sizeof(int));
+    int *used = (int *)malloc(size * sizeof(int));
+
+    
+    for (int i = 0; i < size; i++) {
+        used[i] = 0;  // 0 = empty
+    }
+
+    
+    for (int i = 0; i < n; i++) {
+        int pos = hash(arr[i], size);
+        while (used[pos]) {
+            pos = (pos + 1) % size;  // linear probing
+        }
+        table[pos] = arr[i];
+        used[pos] = 1;
+    }
+
+   
+    int index = 0;
+    for (int i = 0; i < size; i++) {
+        if (used[i]) {
+            arr[index++] = table[i];
+        }
+    }
+
+    
+    if (minVal < 0) {
+        for (int i = 0; i < n; i++) {
+            arr[i] += minVal;
+        }
+    }
+
+    free(table);
+    free(used);
+}
+
+
+void printArray(int arr[], int n) {
+    for (int i = 0; i < n; i++)
+        printf("%d ", arr[i]);
+    printf("\n");
+}
+
+
+int main() {
+    int n;
+    printf("Enter number of elements: ");
+    scanf("%d", &n);
+
+    int arr[n];
+    printf("Enter %d integers (can be negative): ", n);
+    for (int i = 0; i < n; i++) {
+        scanf("%d", &arr[i]);
+    }
+
+    printf("Original array: ");
+    printArray(arr, n);
+
+    addressCalculationSort(arr, n);
+
+    printf("Sorted array:   ");
+    printArray(arr, n);
+
+    return 0;
+}
