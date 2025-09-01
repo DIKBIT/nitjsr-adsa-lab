@@ -1,0 +1,98 @@
+#include <stdio.h>
+#include <limits.h>
+
+
+int getMaxBit(int arr[], int n) {
+    int max = arr[0];
+    for (int i = 1; i < n; i++) {
+        if (arr[i] > max)
+            max = arr[i];
+    }
+    int bits = 0;
+    while (max > 0) {
+        bits++;
+        max >>= 1; // divide by 2
+    }
+    return bits;
+}
+
+
+void radixExchangeSort(int arr[], int left, int right, int bit) {
+    if (left >= right || bit < 0)
+        return;
+
+    int i = left, j = right;
+    while (i <= j) {
+       
+        while (i <= right && ((arr[i] >> bit) & 1) == 0) i++;
+
+        while (j >= left && ((arr[j] >> bit) & 1) == 1) j--;
+
+        if (i < j) {
+            int temp = arr[i];
+            arr[i] = arr[j];
+            arr[j] = temp;
+            i++;
+            j--;
+        }
+    }
+
+    
+    radixExchangeSort(arr, left, j, bit - 1);
+    radixExchangeSort(arr, i, right, bit - 1);
+}
+
+
+void printArray(int arr[], int n) {
+    for (int i = 0; i < n; i++)
+        printf("%d ", arr[i]);
+    printf("\n");
+}
+
+
+int main() {
+    int n;
+
+    printf("Enter number of elements: ");
+    scanf("%d", &n);
+
+    int arr[n];
+
+    printf("Enter %d integers (can be negative): ", n);
+    for (int i = 0; i < n; i++) {
+        scanf("%d", &arr[i]);
+    }
+
+    printf("Original array: ");
+    printArray(arr, n);
+
+    
+    int minVal = arr[0];
+    for (int i = 1; i < n; i++) {
+        if (arr[i] < minVal)
+            minVal = arr[i];
+    }
+
+    
+    if (minVal < 0) {
+        for (int i = 0; i < n; i++) {
+            arr[i] -= minVal; // shifting
+        }
+    }
+
+    
+    int maxBit = getMaxBit(arr, n) - 1;
+    radixExchangeSort(arr, 0, n - 1, maxBit);
+
+    
+    if (minVal < 0) {
+        for (int i = 0; i < n; i++) {
+            arr[i] += minVal;
+        }
+    }
+
+    printf("Sorted array:   ");
+    printArray(arr, n);
+
+    return 0;
+}
