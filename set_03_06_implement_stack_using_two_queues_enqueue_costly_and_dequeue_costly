@@ -1,0 +1,50 @@
+#include <stdio.h>
+#define MAX 50
+
+typedef struct { int arr[MAX], f, r; } Queue;
+void init(Queue *q){ q->f=q->r=-1; }
+int empty(Queue *q){ return q->f==-1; }
+void enq(Queue *q,int x){ if(q->r==MAX-1)return; if(q->f==-1)q->f=0; q->arr[++q->r]=x; }
+int deq(Queue *q){ if(empty(q))return -1; int x=q->arr[q->f]; if(q->f==q->r)q->f=q->r=-1; else q->f++; return x; }
+int front(Queue *q){ return empty(q)?-1:q->arr[q->f]; }
+int back(Queue *q){ return empty(q)?-1:q->arr[q->r]; }
+
+// Method1: Push costly
+typedef struct { Queue q1,q2; } Stack1;
+void initS1(Stack1 *s){ init(&s->q1); init(&s->q2); }
+void push1(Stack1 *s,int x){ enq(&s->q2,x); while(!empty(&s->q1))enq(&s->q2,deq(&s->q1)); Queue t=s->q1;s->q1=s->q2;s->q2=t; }
+int pop1(Stack1 *s){ return deq(&s->q1); }
+int top1(Stack1 *s){ return front(&s->q1); }
+
+// Method2: Pop costly
+typedef struct { Queue q1,q2; } Stack2;
+void initS2(Stack2 *s){ init(&s->q1); init(&s->q2); }
+void push2(Stack2 *s,int x){ enq(&s->q1,x); }
+int pop2(Stack2 *s){ while(s->q1.f!=s->q1.r)enq(&s->q2,deq(&s->q1)); int x=deq(&s->q1); Queue t=s->q1;s->q1=s->q2;s->q2=t; return x; }
+int top2(Stack2 *s){ return back(&s->q1); }
+
+// ---------------- MAIN ----------------
+int main(){
+    int choice,method,val;
+    printf("Choose Method:\n1. Push costly\n2. Pop costly\nEnter: ");
+    scanf("%d",&method);
+
+    Stack1 s1; Stack2 s2;
+    if(method==1) initS1(&s1); else initS2(&s2);
+
+    do{
+        printf("\n1.Push  2.Pop  3.Top  4.Exit\nChoice: ");
+        scanf("%d",&choice);
+        switch(choice){
+            case 1: printf("Enter value: "); scanf("%d",&val);
+                    if(method==1) push1(&s1,val); else push2(&s2,val); break;
+            case 2: val=(method==1)?pop1(&s1):pop2(&s2);
+                    if(val==-1) printf("Stack Underflow\n"); else printf("Popped=%d\n",val); break;
+            case 3: val=(method==1)?top1(&s1):top2(&s2);
+                    if(val==-1) printf("Stack Empty\n"); else printf("Top=%d\n",val); break;
+            case 4: printf("Exiting...\n"); break;
+            default: printf("Invalid!\n");
+        }
+    }while(choice!=4);
+    return 0;
+}
