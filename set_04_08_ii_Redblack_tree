@@ -1,0 +1,67 @@
+#include <stdio.h>
+#include <stdlib.h>
+
+typedef enum { R, B } Color;
+typedef struct Node {
+    int d; Color c;
+    struct Node *l, *r, *p;
+} Node;
+typedef struct { Node *root, *nil; } RBTree;
+
+RBTree* createTree() {
+    RBTree *t = malloc(sizeof(RBTree));
+    t->nil = malloc(sizeof(Node)); t->nil->c = B;
+    t->nil->l = t->nil->r = t->nil->p = NULL;
+    t->root = t->nil; return t;
+}
+Node* newNode(RBTree *t, int d) {
+    Node *n = malloc(sizeof(Node));
+    n->d = d; n->c = R;
+    n->l = n->r = n->p = t->nil; return n;
+}
+void rotL(RBTree *t, Node *x) {
+    Node *y = x->r;
+    x->r = y->l; if (y->l!=t->nil) y->l->p = x;
+    y->p = x->p;
+    if (x->p==t->nil) t->root=y;
+    else if (x==x->p->l) x->p->l=y; else x->p->r=y;
+    y->l=x; x->p=y;
+}
+void rotR(RBTree *t, Node *y) {
+    Node *x = y->l;
+    y->l = x->r; if (x->r!=t->nil) x->r->p = y;
+    x->p = y->p;
+    if (y->p==t->nil) t->root=x;
+    else if (y==y->p->r) y->p->r=x; else y->p->l=x;
+    x->r=y; y->p=x;
+}
+void fixIns(RBTree *t, Node *z) {
+    while (z->p->c==R) {
+        Node *gp=z->p->p, *y=(z->p==gp->l?gp->r:gp->l);
+        if (y->c==R) { z->p->c=B; y->c=B; gp->c=R; z=gp; }
+        else {
+            if (z== (z->p==gp->l? z->p->r: z->p->l)) {
+                z=z->p; (z==z->p->l?rotL:rotR)(t,z);
+            }
+            z->p->c=B; gp->c=R;
+            (z->p==gp->l?rotR:rotL)(t,gp);
+        }
+    } t->root->c=B;
+}
+void insert(RBTree *t, int d) {
+    Node *z=newNode(t,d), *y=t->nil, *x=t->root;
+    while(x!=t->nil){ y=x; x=(z->d<x->d?x->l:x->r); }
+    z->p=y; if(y==t->nil) t->root=z;
+    else if(z->d<y->d) y->l=z; else y->r=z;
+    fixIns(t,z);
+}
+Node* search(RBTree*t,int k){Node*x=t->root;while(x!=t->nil&&k!=x->d)x=(k<x->d?x->l:x->r);return x;}
+void inorder(RBTree*t,Node*n){if(n!=t->nil){inorder(t,n->l);printf("%d(%c) ",n->d,n->c?'B':'R');inorder(t,n->r);}}
+
+int main(){
+    RBTree*t=createTree();
+    insert(t,10); insert(t,20); insert(t,30); insert(t,15); insert(t,25);
+    printf("Inorder: "); inorder(t,t->root); printf("\n");
+    Node* f=search(t,15); printf(f!=t->nil?"Found %d\n":"Not found\n",f->d);
+    return 0;
+}
