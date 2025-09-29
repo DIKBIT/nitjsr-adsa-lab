@@ -1,196 +1,114 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <math.h>
 #include <string.h>
+#include <math.h>
 
-#define N 4   // 4x4 puzzle
+#define N 4
+#define HEAP_CAP 10000
 
-// Structure for a puzzle state
 typedef struct Node {
-    int puzzle[N][N];
-    int x, y;           // blank tile position
-    int level;          // depth (number of moves so far)
-    int cost;           // heuristic + level
+    int p[N][N];
+    int x, y;           // blank pos
+    int g;              // level (cost so far)
+    int h;              // heuristic
     struct Node* parent;
 } Node;
 
-// Goal state
 int goal[N][N] = {
-    {1,  2,  3,  4},
-    {5,  6,  7,  8},
-    {9, 10, 11, 12},
-    {13,14, 15, 0}
+    {1,2,3,4},{5,6,7,8},{9,10,11,12},{13,14,15,0}
 };
+int dr[] = {1,-1,0,0}, dc[] = {0,0,-1,1};
 
-// Directions: up, down, left, right
-int row[] = { 1, -1, 0, 0 };
-int col[] = { 0, 0, -1, 1 };
-
-// Manhattan distance heuristic
-int calculateCost(int puzzle[N][N]) {
-    int cost = 0;
-    for (int i = 0; i < N; i++) {
-        for (int j = 0; j < N; j++) {
-            if (puzzle[i][j] != 0) {
-                int value = puzzle[i][j];
-                int targetX = (value - 1) / N;
-                int targetY = (value - 1) % N;
-                cost += abs(i - targetX) + abs(j - targetY);
-            }
+int manhattan(int p[N][N]) {
+    int s=0;
+    for(int i=0;i<N;i++) for(int j=0;j<N;j++){
+        int v=p[i][j];
+        if(v){
+            int tx=(v-1)/N, ty=(v-1)%N;
+            s += abs(i-tx)+abs(j-ty);
         }
     }
-    return cost;
+    return s;
 }
 
-// Allocate a new node
-Node* newNode(int puzzle[N][N], int x, int y, int newX, int newY, int level, Node* parent) {
-    Node* node = (Node*)malloc(sizeof(Node));
-    memcpy(node->puzzle, puzzle, sizeof(node->puzzle));
-
-    // swap blank tile
-    int temp = node->puzzle[x][y];
-    node->puzzle[x][y] = node->puzzle[newX][newY];
-    node->puzzle[newX][newY] = temp;
-
-    node->x = newX;
-    node->y = newY;
-    node->level = level;
-    node->parent = parent;
-    node->cost = calculateCost(node->puzzle);
-    return node;
+Node* make_node(int p[N][N], int x,int y,int nx,int ny,int g,Node* par){
+    Node* n = malloc(sizeof(Node));
+    memcpy(n->p,p,sizeof n->p);
+    int tmp = n->p[x][y]; n->p[x][y]=n->p[nx][ny]; n->p[nx][ny]=tmp;
+    n->x=nx; n->y=ny; n->g=g; n->parent=par; n->h = manhattan(n->p);
+    return n;
 }
 
-// Print puzzle
-void printPuzzle(int puzzle[N][N]) {
-    for (int i = 0; i < N; i++) {
-        for (int j = 0; j < N; j++) {
-            if (puzzle[i][j] == 0) printf("   ");
-            else printf("%2d ", puzzle[i][j]);
-        }
+void printP(int p[N][N]){
+    for(int i=0;i<N;i++){ 
+        for(int j=0;j<N;j++) printf(p[i][j] ? "%2d " : "   ", p[i][j]);
         printf("\n");
     }
     printf("\n");
 }
+void printPath(Node* n){ if(!n) return; printPath(n->parent); printP(n->p); }
 
-// Print path from root to goal
-void printPath(Node* root) {
-    if (root == NULL) return;
-    printPath(root->parent);
-    printPuzzle(root->puzzle);
-}
+typedef struct { Node* a[HEAP_CAP]; int sz; } MinHeap;
+void swap(Node** x,Node** y){ Node* t=*x; *x=*y; *y=t; }
+int f(Node* n){ return n->g + n->h; }
 
-// Priority queue (min-heap) for nodes
-typedef struct {
-    Node* nodes[10000];
-    int size;
-} MinHeap;
-
-void swap(Node** a, Node** b) {
-    Node* temp = *a;
-    *a = *b;
-    *b = temp;
-}
-
-void push(MinHeap* heap, Node* node) {
-    heap->nodes[heap->size] = node;
-    int i = heap->size;
-    heap->size++;
-
-    while (i && (heap->nodes[i]->cost + heap->nodes[i]->level) < 
-                (heap->nodes[(i-1)/2]->cost + heap->nodes[(i-1)/2]->level)) {
-        swap(&heap->nodes[i], &heap->nodes[(i-1)/2]);
-        i = (i-1)/2;
+void push(MinHeap* h, Node* n){
+    int i = h->sz; h->a[h->sz++] = n;
+    while(i && f(h->a[i]) < f(h->a[(i-1)/2])){
+        swap(&h->a[i], &h->a[(i-1)/2]);
+        i=(i-1)/2;
     }
 }
-
-Node* pop(MinHeap* heap) {
-    if (heap->size <= 0) return NULL;
-    Node* root = heap->nodes[0];
-    heap->nodes[0] = heap->nodes[--heap->size];
-
-    int i = 0;
-    while (1) {
-        int smallest = i;
-        int left = 2*i + 1;
-        int right = 2*i + 2;
-
-        if (left < heap->size && 
-            (heap->nodes[left]->cost + heap->nodes[left]->level) < 
-            (heap->nodes[smallest]->cost + heap->nodes[smallest]->level))
-            smallest = left;
-
-        if (right < heap->size && 
-            (heap->nodes[right]->cost + heap->nodes[right]->level) < 
-            (heap->nodes[smallest]->cost + heap->nodes[smallest]->level))
-            smallest = right;
-
-        if (smallest != i) {
-            swap(&heap->nodes[i], &heap->nodes[smallest]);
-            i = smallest;
-        } else break;
+Node* pop(MinHeap* h){
+    if(h->sz==0) return NULL;
+    Node* out = h->a[0];
+    h->a[0]=h->a[--h->sz];
+    int i=0;
+    while(1){
+        int l=2*i+1, r=2*i+2, s=i;
+        if(l<h->sz && f(h->a[l])<f(h->a[s])) s=l;
+        if(r<h->sz && f(h->a[r])<f(h->a[s])) s=r;
+        if(s==i) break;
+        swap(&h->a[i], &h->a[s]); i=s;
     }
-    return root;
+    return out;
 }
 
-// Check if solved
-int isSolved(int puzzle[N][N]) {
-    return memcmp(puzzle, goal, sizeof(goal)) == 0;
-}
+int solved(int a[N][N]){ return memcmp(a,goal,sizeof goal)==0; }
 
-// Solve puzzle
-void solve(int puzzle[N][N], int x, int y) {
-    MinHeap heap;
-    heap.size = 0;
-
-    Node* root = (Node*)malloc(sizeof(Node));
-    memcpy(root->puzzle, puzzle, sizeof(root->puzzle));
-    root->x = x;
-    root->y = y;
-    root->parent = NULL;
-    root->level = 0;
-    root->cost = calculateCost(puzzle);
-
-    push(&heap, root);
-
-    while (heap.size) {
-        Node* min = pop(&heap);
-
-        if (isSolved(min->puzzle)) {
-            printf("Solution found in %d moves:\n\n", min->level);
-            printPath(min);
+void solve(int start[N][N], int sx,int sy){
+    MinHeap H = {.sz=0};
+    Node* root = malloc(sizeof(Node));
+    memcpy(root->p,start,sizeof root->p); root->x=sx; root->y=sy; root->g=0; root->parent=NULL; root->h = manhattan(start);
+    push(&H, root);
+    while(H.sz){
+        Node* cur = pop(&H);
+        if(solved(cur->p)){
+            printf("Solution found in %d moves:\n\n", cur->g);
+            printPath(cur);
             return;
         }
-
-        for (int i = 0; i < 4; i++) {
-            int newX = min->x + row[i];
-            int newY = min->y + col[i];
-            if (newX >= 0 && newX < N && newY >= 0 && newY < N) {
-                Node* child = newNode(min->puzzle, min->x, min->y, newX, newY, min->level + 1, min);
-                push(&heap, child);
+        for(int k=0;k<4;k++){
+            int nx=cur->x+dr[k], ny=cur->y+dc[k];
+            if(nx>=0 && nx<N && ny>=0 && ny<N){
+                Node* child = make_node(cur->p, cur->x, cur->y, nx, ny, cur->g+1, cur);
+                push(&H, child);
             }
         }
     }
+    printf("No solution found.\n");
 }
 
-int main() {
+int main(){
     int puzzle[N][N] = {
-        {1,  2,  3,  4},
-        {5,  6,  0,  8},
-        {9, 10,  7, 12},
-        {13,14, 11, 15}
+        {1,2,3,4},
+        {5,6,0,8},
+        {9,10,7,12},
+        {13,14,11,15}
     };
-
-    // Find blank position
-    int x, y;
-    for (int i = 0; i < N; i++)
-        for (int j = 0; j < N; j++)
-            if (puzzle[i][j] == 0) { x = i; y = j; }
-
-    printf("Initial state:\n\n");
-    printPuzzle(puzzle);
-
-    solve(puzzle, x, y);
-
+    int sx=0, sy=0;
+    for(int i=0;i<N;i++) for(int j=0;j<N;j++) if(puzzle[i][j]==0){ sx=i; sy=j; }
+    printf("Initial state:\n\n"); printP(puzzle);
+    solve(puzzle, sx, sy);
     return 0;
 }
-
